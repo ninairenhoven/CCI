@@ -29,11 +29,16 @@ from CCI_modules.CCI_utils import (
 # --------------------------------------------------------------------------
 
 # Rå svarkode -> score (-100..100) per CCI-spørsmål, bygget direkte fra
-# SCALE_SELECTION/SCALE_DEFINITION/SCALE_SCORES (CCI_utils). Dette er den samme
-# mappingen som select_and_apply_scale + SCALE_SCORES gir til sammen, bare uten
-# PP/P/./M/MM-bokstavkodene som mellomsteg. select_and_apply_scale beholdes
-# uendret i CCI_utils siden CCI_Norge.py bruker bokstavkodene direkte til å
-# beregne vektet andel per svarkategori, ikke bare et numerisk gjennomsnitt.
+# SCALE_SELECTION/SCALE_DEFINITION/SCALE_SCORES (CCI_utils). 
+#
+#{ 'q1': {1: 100, 2: 50, 3: 0, 4: -50, 5: -100, 6: 0}, 
+#  'q2': {1: 100, 2: 50, 3: 0, 4: -50, 5: -100, 6: 0}
+#   ... 
+#  'q12': {1: 100, 2: 50, 3: -50, 4: -100, 5: 0},
+#  'q13': {1: 100, 2: 50, 3: -50, 4: -100, 5: 0},
+#   ...
+#  'q7': {5: 100, 4: 50, 3: 0, 2: -50, 1: -100, 6: 0}
+#}
 VALUE_SCORE_MAP = {
     question: {value: SCALE_SCORES[label] for value, label in SCALE_DEFINITION[scale_id].items()}
     for scale_id, questions in SCALE_SELECTION.items()
