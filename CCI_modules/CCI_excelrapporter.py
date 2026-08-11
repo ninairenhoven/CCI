@@ -8,11 +8,10 @@ import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 import os
 
-from CCI_modules.CCI_utils import CCI_DEFINISJON, KJOPSINDEKS_DEFINISJON, VARNAME_MAPPING_NO, QUESTION_TITLES, PATH_GENERERTE_FILER
+from CCI_modules.CCI_utils import VARNAME_MAPPING_NO, PATH_GENERERTE_FILER
 from CCI_modules.CCI_utils import read_combined_historical_data, read_norway_historical_data
 # LESE DATA
 
-TODAY = dt.datetime.now().strftime('%Y-%m-%d')
 CURRENT_MONTH = dt.datetime.now().strftime('%Y-%m')
 
 def get_output_path():
@@ -147,79 +146,15 @@ def write_csv_norgesbank(data_norge_net):
 
 
 
-def kvartalstabeller(norge_akk_data):
-    data = norge_akk_data.copy()
-    #data.index = pd.to_datetime(data.index, dayfirst=True)
-    
-    quarters_from = '2023Q3'
-    years_from = 2021
-    years_to = 2023
-    data = data.loc[data.index.year>=years_from]
-    
-    month_counts = data.resample('QE').count().max(axis=1)
-    completed_quarters = month_counts[month_counts == 3].dropna().index
-
-    qdata = data.resample('QE').mean()
-    qdata = qdata.loc[completed_quarters]
-    qdata.index = qdata.index.to_period('Q')
-
-    last_quarter = qdata.index[-1]
-    second_last = qdata.index[-2]
-    fifth_last = qdata.index[-5]
-    diff_lastQ = qdata.loc[last_quarter]-qdata.loc[second_last]
-    diff_4lastQ = qdata.loc[last_quarter]-qdata.loc[fifth_last]
-
-    # Remove data before selected quarter
-    qdata = qdata.loc[qdata.index>=quarters_from]
-    qdata.index = qdata.index.strftime("Q%q-%y")
-    qdata.loc['Endring siste kvartal'] = diff_lastQ
-    qdata.loc['Endring siste 4 kvartal'] = diff_4lastQ
-
-    ydata = data.resample('YE').mean() 
-    ydata = ydata.loc[ydata.index.year<=years_to] #quarters_from]
-    ydata.index = ydata.index.year.astype(str)
-
-    table_data = pd.concat([ydata,qdata])
-
-    table_data = table_data.round(2)
-    pct_cols = table_data.columns.get_level_values(1).isin(['up', 'down'])
-    table_data.loc[:, pct_cols] = (table_data.loc[:, pct_cols] / 100)
-
-    inner_level_order = ['','up','down','net','']
-    select_cols_cci_table = [('CCI','net'), ('','')] + list(pd.MultiIndex.from_product([CCI_DEFINISJON, inner_level_order]))
-    select_cols_kjopsindeks_table = [('Kjopsindeksen','net'), ('','')] + list(pd.MultiIndex.from_product([KJOPSINDEKS_DEFINISJON, inner_level_order]))
-    
-    cci_table = table_data.reindex(select_cols_cci_table, axis=1).T
-    kjopsindeks_table = table_data.reindex(select_cols_kjopsindeks_table, axis=1).T
-
-    cci_table = cci_table.rename(QUESTION_TITLES)
-    kjopsindeks_table = kjopsindeks_table.rename(QUESTION_TITLES)
-
-    output_file = 'Forbrukermeteret_Kvartalstabeller_{}.xlsx'.format(TODAY)
-    output_file = asksaveasfilename(initialdir = PATH_GENERERTE_FILER, initialfile = output_file)
-    
-    with pd.ExcelWriter(output_file) as writer:
-        cci_table.to_excel(writer, sheet_name='CCI')
-        kjopsindeks_table.to_excel(writer, sheet_name='Kjøpsindeksen')
-        print('Skrevet til excel\n')
-    
-    return cci_table, kjopsindeks_table
-
-
-
 def write_cci_reports(data_samlet, data_norge_detalj):
     print('Skriver Excel-rapport til abonnenter Forbrukermeteret')
     output_file = create_cci_rapport_file()
     write_country_sheets_to_excel(data_samlet, output_file)
     write_norway_details_to_excel(data_norge_detalj, output_file)
-    
+
     print('Skriver fil til Norges Bank')
     data_norge_net = data_norge_detalj.xs('net', level=1, axis=1)
-    _ = write_csv_norgesbank(data_norge_net)    
-
-    inp = input('Skriv kvartalstabeller? Y/N: ')
-    if inp.upper()=='Y':
-        _ = kvartalstabeller(data_norge_detalj)
+    _ = write_csv_norgesbank(data_norge_net)
 
 
 

@@ -71,7 +71,6 @@ VARNAME_MAPPING_NO = {
 # 
 # Kolonneheader i CCI_og_delindekser_Norge_akkumulert.csv -> Spørsmålstittel på norsk
 # # Brukes:
-# - CCI_excelrapporter.kvartalstabeller() 
 # - CCI_plotting.bar_and_line_with_dateindex()
 #
 QUESTION_TITLES = {
