@@ -20,13 +20,25 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from CCI_modules.CCI_utils import (
     PATH_DATA_MAANED, PATH_LO, PATH_MOBI,
     CCI_DEFINISJON, KJOPSINDEKS_DEFINISJON, SPSS_VARIABLE_MAPPING, SCORE_LABELS,
-    SCALE_SCORES, MONTHS_LO, QUARTERS_LO, YYMM_LABELS, YYQ_LABELS,
-    CCI_VARIABLES, LO_BAKGRUNN, MOBI_BAKGRUNN, select_and_apply_scale,
+    SCALE_SELECTION, SCALE_DEFINITION, SCALE_SCORES, MONTHS_LO, QUARTERS_LO, YYMM_LABELS, YYQ_LABELS,
+    CCI_VARIABLES, LO_BAKGRUNN, MOBI_BAKGRUNN,
 )
 
 # --------------------------------------------------------------------------
 # KONSTANTER SPESIFIKKE FOR BERIKING (ikke i CCI_utils)
 # --------------------------------------------------------------------------
+
+# Rå svarkode -> score (-100..100) per CCI-spørsmål, bygget direkte fra
+# SCALE_SELECTION/SCALE_DEFINITION/SCALE_SCORES (CCI_utils). Dette er den samme
+# mappingen som select_and_apply_scale + SCALE_SCORES gir til sammen, bare uten
+# PP/P/./M/MM-bokstavkodene som mellomsteg. select_and_apply_scale beholdes
+# uendret i CCI_utils siden CCI_Norge.py bruker bokstavkodene direkte til å
+# beregne vektet andel per svarkategori, ikke bare et numerisk gjennomsnitt.
+VALUE_SCORE_MAP = {
+    question: {value: SCALE_SCORES[label] for value, label in SCALE_DEFINITION[scale_id].items()}
+    for scale_id, questions in SCALE_SELECTION.items()
+    for question in questions
+}
 
 # Definerer hvordan hver bakgrunnsvariabel skal rekodes:
 #   input:  navn på rå SPSS-variabel
@@ -150,13 +162,22 @@ def tracker_variables(date_column):
 
 
 def calculate_respondent_CCI_scores(df):
-    # select_and_apply_scale (fra CCI_utils) oversetter rå svarkoder (1-5/1-4) til
-    # PP/P/./M/MM ("sterkt positiv" ... "sterkt negativ"), som her regnes om til
-    # score -100..100 (SCALE_SCORES). CCI og Kjøpsindeksen er gjennomsnitt av
-    # score for et fast utvalg spørsmål (CCI_DEFINISJON/KJOPSINDEKS_DEFINISJON i CCI_utils).
+    # Slår opp score -100..100 direkte per rå svarkode (VALUE_SCORE_MAP over).
+    # CCI og Kjøpsindeksen er gjennomsnitt av score for et fast utvalg spørsmål
+    # (CCI_DEFINISJON/KJOPSINDEKS_DEFINISJON i CCI_utils).
     cci_questions = list(SPSS_VARIABLE_MAPPING.keys())
-    dfm = select_and_apply_scale(df)[cci_questions]
-    scores = dfm.map(lambda x: SCALE_SCORES[x])
+    raw = df[cci_questions]
+    scores = raw.apply(lambda col: col.map(VALUE_SCORE_MAP[col.name]))
+
+    # col.map() gir NaN for koder uten score-mapping; skill dette fra reelt
+    # manglende svar (rå verdi allerede NaN) så uventede koder ikke stille
+    # forsvinner inn i gjennomsnittet.
+    unexpected = raw.notna() & scores.isna()
+    if unexpected.any().any():
+        bad_values = {q: sorted(raw.loc[unexpected[q], q].unique()) for q in cci_questions if unexpected[q].any()}
+        print(f"ADVARSEL: Uventede svarkoder uten score-mapping: {bad_values}")
+        input("Press Enter for å fortsette...")
+
     temp = scores.rename(columns=SPSS_VARIABLE_MAPPING)
     scores["cci"] = temp[CCI_DEFINISJON].mean(axis=1)
     scores["kjopsindeks"] = temp[KJOPSINDEKS_DEFINISJON].mean(axis=1)
