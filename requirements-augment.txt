@@ -1,0 +1,5 @@
+# Minimal requirements for running CCI_augment_split_standalone.py only
+# (e.g. on a colleague's machine that doesn't run the rest of the pipeline).
+pandas==3.0.5
+numpy==2.5.1
+pyreadstat==1.3.5
