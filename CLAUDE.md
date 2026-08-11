@@ -15,7 +15,7 @@ There is no build, lint, or test tooling in this repo — install dependencies w
 and run scripts directly. All scripts are interactive: they open Tkinter file-picker dialogs, print progress/data
 to the console, and block on `input()` prompts (both for y/n decisions and for warnings the operator must
 acknowledge before continuing). They are meant to be run from a terminal on Windows, not imported as a library or
-run headlessly — e.g. `py -i CCI_augment_split_standalone.py`, or via the existing `python_augment_spss_CCI_LO.bat`
+run headlessly — e.g. `py -i CCI_LO_Mobi_prepare_files.py`, or via the existing `python_augment_spss_CCI_LO.bat`
 launcher (currently points at the legacy `CCI_LO_augment_split_merge.py`, not the standalone scripts below).
 
 Because everything depends on OneDrive/SharePoint-mounted folders under `Path.home()` (see `PATH_*` constants in
@@ -24,10 +24,10 @@ can't be run or meaningfully tested outside the intended user's machine.
 
 ## Monthly workflow (entry-point scripts, run in order)
 
-1. **`CCI_augment_split_standalone.py`** — reads a raw monthly SPSS file, computes CCI/Kjøpsindeks scores per
+1. **`CCI_LO_Mobi_prepare_files.py`** — reads a raw monthly SPSS file, computes CCI/Kjøpsindeks scores per
    respondent, recodes background variables, adds tracker variables (`yymm`, `yyq`, `unik_id`, LO's `Måned`/`Kvartal`
    counters), then splits the result into separate `.sav` files for CCI, LO, and Mobilitetsbarometeret.
-2. **`CCI_merge_with_master_standalone.py`** — merges that month's CCI file into the accumulated CCI master `.sav`
+2. **`CCI_master_merge.py`** — merges that month's CCI file into the accumulated CCI master `.sav`
    file, after comparing value/column labels between the new data and the master and checking for already-present
    months.
 3. **`CCI_prosess.py`** — the downstream reporting pipeline: computes Norway's monthly index (`CCI_Norge.py`),
@@ -35,8 +35,9 @@ can't be run or meaningfully tested outside the intended user's machine.
    (`CCI_excelrapporter.py`), and generates PNG charts (`CCI_plotting.py`).
 
 `CCI_LO_augment_split_merge.py` (repo root) is the original, pre-split version of steps 1–2, kept for reference;
-new work on augment/split/merge should go in the two `_standalone.py` scripts, not this file or the
-`CCI_modules/CCI_LO_augment_spss.py` / `CCI_LO_split_save_spss.py` / `CCI_merge_with_master.py` modules it wraps.
+new work on augment/split/merge should go in `CCI_LO_Mobi_prepare_files.py` / `CCI_master_merge.py`, not
+this file or the `CCI_modules/CCI_LO_augment_spss.py` / `CCI_LO_split_save_spss.py` / `CCI_merge_with_master.py`
+modules it wraps.
 
 ## Architecture
 
@@ -45,12 +46,12 @@ new work on augment/split/merge should go in the two `_standalone.py` scripts, n
   (`SPSS_VARIABLE_MAPPING`), the CCI/Kjøpsindeksen question-set definitions (`CCI_DEFINISJON`,
   `KJOPSINDEKS_DEFINISJON`), scale-coding constants (`SCALE_SELECTION`/`SCALE_DEFINITION`/`SCALE_SCORES`), and
   generic readers for the accumulated historical CSVs (`read_norway_historical_data`, `read_combined_historical_data`).
-  The two `_standalone.py` scripts at the repo root deliberately import shared paths/constants from here rather
-  than duplicating them, while keeping their own processing logic self-contained (no dependency on the other
-  `CCI_modules` files).
+  `CCI_LO_Mobi_prepare_files.py` and `CCI_master_merge.py` at the repo root deliberately import shared
+  paths/constants from here rather than duplicating them, while keeping their own processing logic self-contained
+  (no dependency on the other `CCI_modules` files).
 
 - **Two distinct scoring methodologies exist for the same survey questions** — don't conflate them:
-  - *Per-respondent linear score* (`-100..100`, averaged): used in `CCI_augment_split_standalone.py`'s
+  - *Per-respondent linear score* (`-100..100`, averaged): used in `CCI_LO_Mobi_prepare_files.py`'s
     `VALUE_SCORE_MAP`/`calculate_respondent_CCI_scores`, applied at the individual-respondent level before saving
     to SPSS.
   - *Aggregate net score* (`% top-box − % bottom-box`, i.e. `up`/`down`/`net`): used in `CCI_modules/CCI_Norge.py`'s

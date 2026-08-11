@@ -1,7 +1,7 @@
 """
 Standalone versjon av merge-delen av CCI_LO_augment_split_merge.py.
 
-Slår sammen en beriket/komplett månedlig SPSS-fil (se CCI_augment_split_standalone.py)
+Slår sammen en beriket/komplett månedlig SPSS-fil (se CCI_LO_Mobi_prepare_files.py)
 med CCI-masterfilen, uten avhengighet til CCI_merge_with_master.py i CCI_modules.
 Gjenbruker paths fra CCI_modules.CCI_utils fremfor å duplisere dem.
 """

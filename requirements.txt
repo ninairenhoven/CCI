@@ -1,4 +1,4 @@
-# Full pipeline. Only running CCI_augment_split_standalone.py (e.g. on a
+# Full pipeline. Only running CCI_LO_Mobi_prepare_files.py (e.g. on a
 # colleague's machine)? Use requirements-augment.txt instead.
 
 # Used throughout: augment/split/merge scripts, CCI_prosess.py, CCI_modules/
