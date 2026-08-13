@@ -198,32 +198,6 @@ def calculate_respondent_CCI_scores(df):
     return scores
 
 
-def print_recode_mapping(raw_series, mapping, new_labels, old_labels=None):
-    # Viser faktisk mapping i dataene, gruppert per ny kategori:
-    # [ny label]
-    #   - [gammel label] (antall)
-    #   - [gammel label] (antall)
-    # Bruker input-variabelens egne value labels (old_labels) for gammel label,
-    # ikke den rå tallkoden - faller kun tilbake til rå verdi der label mangler.
-    # Viser kun rå verdier som faktisk forekommer i dataene.
-    old_labels = old_labels or {}
-    counts = raw_series.value_counts(dropna=False).sort_index()
-    groups = {}
-    for old_value, count in counts.items():
-        old_label = old_labels.get(old_value, old_value)
-        new_value = mapping.get(old_value, np.nan)
-        groups.setdefault(new_value, []).append((old_label, count))
-
-    def sort_key(new_value):
-        return (pd.isna(new_value), new_value if not pd.isna(new_value) else 0)
-
-    for new_value in sorted(groups, key=sort_key):
-        new_label = "NaN" if pd.isna(new_value) else new_labels.get(new_value, new_value)
-        print(f"  {new_label}")
-        for old_label, count in groups[new_value]:
-            print(f"    - {old_label} ({count})")
-
-
 def examine_recode(raw_series, recoded_series, new_labels, old_labels=None):
     # Viser unike kombinasjoner av rå og faktisk rekodet verdi, hentet direkte
     # fra dataene (ikke fra mapping-definisjonen) - avdekker avvik mellom
@@ -254,7 +228,6 @@ def recode_variables(df, raw_value_labels=None):
                 print(f"ADVARSEL: {input_var} har verdier uten mapping for {newvar}: {unmapped} (beholder original verdi)")
                 input("Press Enter for å fortsette...")
             recoded[newvar] = df[input_var].replace(d)
-            print_recode_mapping(df[input_var], d, description["labels"], raw_value_labels.get(input_var))
             examine_recode(df[input_var], recoded[newvar], description["labels"], raw_value_labels.get(input_var))
         else:
             print(f"ADVARSEL: Variabel {input_var} finnes ikke i input-data, {newvar} settes til NaN")
