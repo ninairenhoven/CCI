@@ -224,6 +224,22 @@ def print_recode_mapping(raw_series, mapping, new_labels, old_labels=None):
             print(f"    - {old_label} ({count})")
 
 
+def examine_recode(raw_series, recoded_series, new_labels, old_labels=None):
+    # Viser unike kombinasjoner av rå og faktisk rekodet verdi, hentet direkte
+    # fra dataene (ikke fra mapping-definisjonen) - avdekker avvik mellom
+    # tiltenkt og faktisk rekoding. drop_duplicates() håndterer NaN riktig,
+    # i motsetning til å bruke NaN som nøkkel i en vanlig dict.
+    old_labels = old_labels or {}
+    combined = raw_series.to_frame("old").merge(recoded_series.to_frame("new"), left_index=True, right_index=True)
+    combined["old_label"] = combined["old"].apply(lambda v: "NaN" if pd.isna(v) else old_labels.get(v, v))
+    combined["new_label"] = combined["new"].apply(lambda v: "NaN" if pd.isna(v) else new_labels.get(v, v))
+    unique_combos = combined.drop_duplicates().sort_values(["new", "old"], na_position="last")
+    for _, row in unique_combos.iterrows():
+        old_value = "NaN" if pd.isna(row["old"]) else round(row["old"])
+        new_value = "NaN" if pd.isna(row["new"]) else round(row["new"])
+        print(f"  [{old_value}] {row['old_label']} -> [{new_value}] {row['new_label']}")
+
+
 def recode_variables(df, raw_value_labels=None):
     raw_value_labels = raw_value_labels or {}
     recoded = pd.DataFrame(index=df.index)
@@ -239,6 +255,7 @@ def recode_variables(df, raw_value_labels=None):
                 input("Press Enter for å fortsette...")
             recoded[newvar] = df[input_var].replace(d)
             print_recode_mapping(df[input_var], d, description["labels"], raw_value_labels.get(input_var))
+            examine_recode(df[input_var], recoded[newvar], description["labels"], raw_value_labels.get(input_var))
         else:
             print(f"ADVARSEL: Variabel {input_var} finnes ikke i input-data, {newvar} settes til NaN")
             input("Press Enter for å fortsette...")
