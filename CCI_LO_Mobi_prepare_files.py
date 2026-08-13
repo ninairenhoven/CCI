@@ -45,49 +45,57 @@ VALUE_SCORE_MAP = {
     for question in questions
 }
 
+def expand_groups(groups):
+    # Snur en gruppert mapping (ny kategori -> liste av rå verdier) til den flate
+    # rå verdi -> ny kategori-formen recode_variables() bruker.
+    return {old: new for new, olds in groups.items() for old in olds}
+
+
 # Definerer hvordan hver bakgrunnsvariabel skal rekodes:
 #   input:  navn på rå SPSS-variabel
-#   d:      mapping fra rå verdi -> ny (grovere) kategori
+#   groups: ny (grovere) kategori -> liste av rå verdier som hører til den
+#           (np.nan som "kategori" betyr at disse rå verdiene nulles ut, uten
+#           å trigge ADVARSEL for umappede verdier - se d8_ny/kode 7 under)
 #   labels: value labels for den nye variabelen
 RECODE_DESCRIPTIONS = {
     "d7_ny": {  # HUSHOLDNINGENS INNTEKT
         "input": "d7",
-        "d": ({k: 1 for k in [1, 2, 3, 4]} | {k: 2 for k in [5, 6, 7]} | {k: 3 for k in [8, 9, 10]}
-              | {k: 4 for k in [11]} | {k: 4 for k in range(14, 21)} | {k: 5 for k in [12, 13]}),
+        "groups": {1: [1, 2, 3, 4], 2: [5, 6, 7], 3: [8, 9, 10],
+                   4: [11] + list(range(14, 21)), 5: [12, 13]},
         "labels": {1: "Under 400 000 kr", 2: "401–700 000 kr", 3: "701–1 000 000 kr",
                    4: "Mer enn 1 000 000 kr", 5: "Vet ikke / ønsker ikke å svare"},
     },
     "d7b_ny": {  # PERSONLIG INNTEKT
         "input": "d7b",
-        "d": {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 4, 11: 4, 12: 5},
+        "groups": {1: [1, 2, 3], 2: [4, 5], 3: [6, 7], 4: [8, 9, 10, 11], 5: [12]},
         "labels": {1: "Under 300 000 kr", 2: "301–500 000 kr", 3: "501–700 000 kr",
                    4: "Mer enn 700 000 kr", 5: "Ønsker ikke å svare"},
     },
     "d8_ny": {  # HUSSTANDSLÅN
         "input": "d8",
-        "d": {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 5, 7: np.nan, 8: 6},
+        "groups": {1: [1], 2: [2], 3: [3], 4: [4], 5: [5, 6], np.nan: [7], 6: [8]},
         "labels": {1: "Under 0,5 mill. kroner", 2: "0,5–0,99 mill. kroner", 3: "1–1,49 mill. kroner",
                    4: "1,5–1,99 mill. kroner", 5: "2 mill. kroner eller mer", 6: "Har ikke lån"},
     },
     "D_ny1_ny": {  # DAGLIG SITUASJON
         "input": "D_ny1",
-        "d": {1: 1, 3: 1, 2: 2, 4: 3, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 5, 11: 6},
+        "groups": {1: [1, 3], 2: [2], 3: [4, 5, 6], 4: [7], 5: [8, 9, 10], 6: [11]},
         "labels": {1: "Heltid", 2: "Deltid", 3: "Permittert", 4: "Pensjonist",
                    5: "Arbeidssøkende/student/annet", 6: "Ønsker ikke svare"},
     },
     "D_ny1_ny_II": {  # DAGLIG SITUASJON (i jobb / ikke i jobb)
         "input": "D_ny1",
-        "d": {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2, 11: 2},
+        "groups": {1: [1, 2, 3], 2: [4, 5, 6, 7, 8, 9, 10, 11]},
         "labels": {1: "I jobb", 2: "Ikke i jobb"},
     },
     "d17_ny": {  # TILSLUTNING
         "input": "d17",
-        "d": {1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 3},
+        "groups": {1: [1], 2: [2, 3, 4, 5], 3: [6]},
         "labels": {1: "LO", 2: "YS/Unio/Akademikerne/Frittstående", 3: "Ikke medlem"},
     },
     "Gxny7_ny": {  # POLITISK AKSE
         "input": "Gxny7",
-        "d": {1: 1, 2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 3, 11: 4, 999: 4},
+        "groups": {1: [1, 2, 3, 4], 2: [5, 6], 3: [7, 8, 9, 10], 4: [11, 999]},
         "labels": {1: "Venstre", 2: "Sentrum", 3: "Høyre", 4: "Vet ikke"},
     },
 }
@@ -222,14 +230,15 @@ def recode_variables(df, raw_value_labels=None):
     value_labels = {}
     for newvar, description in RECODE_DESCRIPTIONS.items():
         input_var = description["input"]
+        d = expand_groups(description["groups"])
         print(f"\nRekoder {input_var} -> {newvar}")
         if input_var in df.columns:
-            unmapped = set(df[input_var]) - set(description["d"].keys())
+            unmapped = set(df[input_var]) - set(d.keys())
             if unmapped:
                 print(f"ADVARSEL: {input_var} har verdier uten mapping for {newvar}: {unmapped} (beholder original verdi)")
                 input("Press Enter for å fortsette...")
-            recoded[newvar] = df[input_var].replace(description["d"])
-            print_recode_mapping(df[input_var], description["d"], description["labels"], raw_value_labels.get(input_var))
+            recoded[newvar] = df[input_var].replace(d)
+            print_recode_mapping(df[input_var], d, description["labels"], raw_value_labels.get(input_var))
         else:
             print(f"ADVARSEL: Variabel {input_var} finnes ikke i input-data, {newvar} settes til NaN")
             input("Press Enter for å fortsette...")
