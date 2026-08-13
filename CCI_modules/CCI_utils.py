@@ -16,8 +16,8 @@ PATH_DATA_MASTER = PATH_DATA.joinpath('CCI Master')
 PATH_EU = PATH_DATA.joinpath('EU-data')
 PATH_HISTORISKE_DATA = PATH_DATA.joinpath('Historisk EU og Norge')
 
-#PATH_LO = user_path.joinpath("Opinion AS/Opinion SharePoint - LO INRA/2024/01 Befolkningsundersøkelse 2024/")
-PATH_LO = user_path.joinpath("Opinion AS/Opinion SharePoint - LO INRA/2025/01 Befolkningsundersøkelse 2025/")
+#PATH_LO = user_path.joinpath("Opinion AS/Opinion SharePoint - LO INRA/2025/01 Befolkningsundersøkelse 2025/")
+PATH_LO = user_path.joinpath("Opinion AS/Opinion SharePoint - LO INRA/2026/01 Befolkningsundersøkelse 2026/")
 
 PATH_MOBI = user_path.joinpath("Opinion AS/Opinion SharePoint - Mobilitetsbarometer/02 Perioder/Data/Datafiler")
 
